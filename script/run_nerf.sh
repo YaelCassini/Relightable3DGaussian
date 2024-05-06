@@ -1,6 +1,6 @@
 #!/bin/bash
 
-root_dir="datasets/nerf_synthetic/"
+root_dir="../Data/NerfSynthetic/"
 list="chair drums ficus hotdog lego materials mic ship"
 
 for i in $list; do
