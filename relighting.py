@@ -184,23 +184,10 @@ if __name__ == '__main__':
 
     progress_bar = tqdm(traject_dict["trajectory"].items(), desc="Rendering")
     for idx, cam_info in progress_bar:
+        w2c = np.array(cam_info, dtype=np.float32).reshape(4, 4)
 
-        # modified by LPY: opacity=1.0
-        # NeRF 'transform_matrix' is a camera-to-world transform
-        c2w = np.array(cam_info)
-        # change from OpenGL/Blender camera axes (Y up, Z back) to COLMAP (Y down, Z forward)
-        c2w[:3, 1:3] *= -1
-
-        # get the world-to-camera transform and set R, T
-        w2c = np.linalg.inv(c2w)
-        R = np.transpose(w2c[:3, :3])  # R is stored transposed due to 'glm' in CUDA code
+        R = w2c[:3, :3].T
         T = w2c[:3, 3]
-
-
-        # w2c = np.array(cam_info, dtype=np.float32).reshape(4, 4)
-
-        # R = w2c[:3, :3].T
-        # T = w2c[:3, 3]
         custom_cam = Camera(colmap_id=0, R=R, T=T,
                             FoVx=fovx, FoVy=fovy, fx=None, fy=None, cx=None, cy=None,
                             image=torch.zeros(3, H, W), image_name=None, uid=0)
