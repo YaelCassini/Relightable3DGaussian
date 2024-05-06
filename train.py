@@ -177,6 +177,7 @@ def training(dataset: ModelParams, opt: OptimizationParams, pipe: PipelineParams
                     gaussians.densify_and_prune(opt.densify_grad_threshold, 0.005, scene.cameras_extent, size_threshold,
                                                 opt.densify_grad_normal_threshold)
 
+                # modified by LPY: if opacity=1.0 cancel reset
                 if iteration % opt.opacity_reset_interval == 0 or (
                         dataset.white_background and iteration == opt.densify_from_iter):
                     gaussians.reset_opacity()

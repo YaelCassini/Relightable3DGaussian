@@ -386,13 +386,13 @@ class GaussianModel:
         rots = torch.zeros((fused_point_cloud.shape[0], 4), device="cuda")
         rots[:, 0] = 1
 
-        opacities = inverse_sigmoid(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
+        opacities = inverse_sigmoid(1.0 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
 
         self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
         self._normal = nn.Parameter(fused_normal.requires_grad_(True))
         self._rotation = nn.Parameter(rots.requires_grad_(True))
         self._scaling = nn.Parameter(scales.requires_grad_(True))
-        self._opacity = nn.Parameter(opacities.requires_grad_(True))
+        self._opacity = nn.Parameter(opacities.requires_grad_(False))
         self._shs_dc = nn.Parameter(shs[:, :, 0:1].transpose(1, 2).contiguous().requires_grad_(True))
         self._shs_rest = nn.Parameter(shs[:, :, 1:].transpose(1, 2).contiguous().requires_grad_(True))
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
@@ -425,7 +425,7 @@ class GaussianModel:
             {'params': [self._normal], 'lr': training_args.normal_lr, "name": "normal"},
             {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"},
             {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
-            {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
+            # {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
             {'params': [self._shs_dc], 'lr': training_args.sh_lr, "name": "f_dc"},
             {'params': [self._shs_rest], 'lr': training_args.sh_lr / 20.0, "name": "f_rest"}
         ]
@@ -523,8 +523,9 @@ class GaussianModel:
 
     def reset_opacity(self):
         opacities_new = inverse_sigmoid(torch.min(self.get_opacity, torch.ones_like(self.get_opacity) * 0.01))
-        optimizable_tensors = self.replace_tensor_to_optimizer(opacities_new, "opacity")
-        self._opacity = optimizable_tensors["opacity"]
+        # optimizable_tensors = self.replace_tensor_to_optimizer(opacities_new, "opacity")
+        # self._opacity = optimizable_tensors["opacity"]
+        self._opacity = opacities_new
 
     def load_ply(self, path):
         plydata = PlyData.read(path)
@@ -567,7 +568,7 @@ class GaussianModel:
         self._normal = nn.Parameter(torch.tensor(normal, dtype=torch.float, device="cuda").requires_grad_(True))
         self._rotation = nn.Parameter(torch.tensor(rots, dtype=torch.float, device="cuda").requires_grad_(True))
         self._scaling = nn.Parameter(torch.tensor(scales, dtype=torch.float, device="cuda").requires_grad_(True))
-        self._opacity = nn.Parameter(torch.tensor(opacities, dtype=torch.float, device="cuda").requires_grad_(True))
+        self._opacity = nn.Parameter(torch.tensor(opacities, dtype=torch.float, device="cuda").requires_grad_(False))
         self._shs_dc = nn.Parameter(torch.tensor(
             shs_dc, dtype=torch.float, device="cuda").transpose(1, 2).contiguous().requires_grad_(True))
         self._shs_rest = nn.Parameter(torch.tensor(
@@ -668,9 +669,11 @@ class GaussianModel:
         self._normal = optimizable_tensors["normal"]
         self._shs_dc = optimizable_tensors["f_dc"]
         self._shs_rest = optimizable_tensors["f_rest"]
-        self._opacity = optimizable_tensors["opacity"]
+        # self._opacity = optimizable_tensors["opacity"]
         self._scaling = optimizable_tensors["scaling"]
         self._rotation = optimizable_tensors["rotation"]
+
+        self._opacity = self._opacity[valid_points_mask]
 
         self.xyz_gradient_accum = self.xyz_gradient_accum[valid_points_mask]
         self.normal_gradient_accum = self.normal_gradient_accum[valid_points_mask]
@@ -720,7 +723,7 @@ class GaussianModel:
              "normal": new_normal,
              "rotation": new_rotation,
              "scaling": new_scaling,
-             "opacity": new_opacities,
+            #  "opacity": new_opacities,
              "f_dc": new_shs_dc,
              "f_rest": new_shs_rest}
 
@@ -741,9 +744,11 @@ class GaussianModel:
         self._normal = optimizable_tensors["normal"]
         self._rotation = optimizable_tensors["rotation"]
         self._scaling = optimizable_tensors["scaling"]
-        self._opacity = optimizable_tensors["opacity"]
+        # self._opacity = optimizable_tensors["opacity"]
         self._shs_dc = optimizable_tensors["f_dc"]
         self._shs_rest = optimizable_tensors["f_rest"]
+
+        self._opacity = torch.cat((self._opacity, new_opacities), dim=0)
 
         self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.normal_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
