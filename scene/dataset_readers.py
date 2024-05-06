@@ -313,30 +313,10 @@ def readCamerasFromTransforms(path, transformsfile, white_background, extension=
 
     with open(os.path.join(path, transformsfile)) as json_file:
         contents = json.load(json_file)
-        # fovx = contents["camera_angle_x"]
-        # modified by LPY: read fl_x&fl_y&cx&cy
-        if "camera_angle_x" not in contents.keys():
-            fovx = None
-        else:
-            fovx = contents["camera_angle_x"] 
-
-        if "cx" in contents.keys():
-            cx = contents["cx"]
-            cy = contents["cy"]
-            fx = contents["fl_x"]
-            fy = contents["fl_y"]
-        
-
+        fovx = contents["camera_angle_x"]
 
         frames = contents["frames"]
         for idx, frame in enumerate(tqdm(frames, leave=False)):
-            # modified by LPY: read fl_x&fl_y&cx&cy
-            if not fovx:
-                if "camera_angle_x" in frame.keys():
-                    fovx = frame["camera_angle_x"] 
-                else:
-                    fovx = None
-
             image_path = os.path.join(path, frame["file_path"] + extension)
             image_name = Path(image_path).stem
 
@@ -372,27 +352,8 @@ def readCamerasFromTransforms(path, transformsfile, white_background, extension=
                 depth = depth * image_mask
                 normal = normal * image_mask[..., np.newaxis]
 
-            # modified by LPY: read fl_x&fl_y&cx&cy
-            if fovx == None:
-                if "fl_x" in frame.keys():
-                    focal_length = frame["fl_x"]
-                    fovy = focal2fov(focal_length, image.shape[1])
-                    fovx = focal2fov(focal_length, image.shape[0])
-                else:
-                    focal_length = contents["fl_x"]
-                    fovy = focal2fov(focal_length, image.shape[1])
-                    fovx = focal2fov(focal_length, image.shape[0])
-            else:
-                fovy = focal2fov(fov2focal(fovx, image.shape[0]), image.shape[1])
-                
-            if "cx" in frame.keys():
-                cx = frame["cx"]
-                cy = frame["cy"]
-                fx = frame["fl_x"]
-                fy = frame["fl_y"]
-
-            # fovy = focal2fov(fov2focal(fovx, image.shape[0]), image.shape[1])
-            cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=fovy, FovX=fovx, fx = fx, fy = fy, cx = cx, cy = cy, image=image, image_mask=image_mask,
+            fovy = focal2fov(fov2focal(fovx, image.shape[0]), image.shape[1])
+            cam_infos.append(CameraInfo(uid=idx, R=R, T=T, FovY=fovy, FovX=fovx, image=image, image_mask=image_mask,
                                         image_path=image_path, depth=depth, normal=normal, image_name=image_name,
                                         width=image.shape[1], height=image.shape[0], hdr=is_hdr))
 

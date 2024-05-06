@@ -1,1 +1,0 @@
-sudo mount -t cifs -o username=DD_Artist,password=D1gital1234,uid=1000,gid=1000 //192.168.16.73/exchange /mnt/exchange
